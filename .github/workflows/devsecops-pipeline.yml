@@ -1,0 +1,42 @@
+name: DevSecOps-Advanced-Pipeline
+
+on:
+  push:
+    branches: [ "master", "main" ]
+
+jobs:
+  build-and-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+
+      # 1. SCA SCAN (Snyk)
+      - name: Run Snyk SCA Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true 
+
+      # 2. SAST SCAN (SonarCloud)
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=Sairam-Appsec_DevSecOps-Cloud-Project
+            -Dsonar.organization=sairam-appsec
+
+      # 3. JIRA TICKET (If Scan Fails)
+      - name: Create Jira Issue on Failure
+        if: failure()
+        uses: atlassian/gajira-create@v3
+        with:
+          project: 'KAN' # Project key for creating tickets
+          issuetype: 'Bug'
+          summary: 'Security Vulnerabilities Detected'
+          description: 'High severity issues found. Check Snyk/SonarCloud dashboards.'
