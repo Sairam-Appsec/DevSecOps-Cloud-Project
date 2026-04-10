@@ -31,12 +31,21 @@ jobs:
             -Dsonar.projectKey=Sairam-Appsec_DevSecOps-Cloud-Project
             -Dsonar.organization=sairam-appsec
 
-      # 3. JIRA TICKET (If Scan Fails)
+# STEP 3: Jira Login (Add this new step!)
+      - name: Login to Jira
+        if: failure()
+        uses: atlassian/gajira-login@v3
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      # STEP 4: Create Jira Ticket on Failure
       - name: Create Jira Issue on Failure
         if: failure()
         uses: atlassian/gajira-create@v3
         with:
-          project: 'KAN' # Project key for creating tickets
+          project: 'KAN' # Nuvvu pampina image lo unna project key
           issuetype: 'Bug'
           summary: 'Security Vulnerabilities Detected'
           description: 'High severity issues found. Check Snyk/SonarCloud dashboards.'
