@@ -13,6 +13,9 @@ jobs:
         with:
           fetch-depth: 0 
 
+      - name: Install Dependencies
+        run: npm install
+        
       # 1. SCA SCAN (Snyk)
       - name: Run Snyk SCA Scan
         uses: snyk/actions/node@master
