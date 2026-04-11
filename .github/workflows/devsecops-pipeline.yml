@@ -79,4 +79,4 @@ jobs:
             Please check:
             1. Trivy (Container)
             2. OWASP ZAP (DAST)
-            3. SonarCloud/Snyk logs.
+            3. SonarCloud/Snyk logs. 
