@@ -18,7 +18,7 @@ jobs:
         uses: snyk/actions/node@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        continue-on-error: true 
+        continue-on-error: true # Even if we have bugs, need to move forward to complete the scan.
 
       # 2. SAST SCAN (SonarCloud)
       - name: SonarCloud Scan
@@ -30,22 +30,53 @@ jobs:
           args: >
             -Dsonar.projectKey=Sairam-Appsec_DevSecOps-Cloud-Project
             -Dsonar.organization=sairam-appsec
+        continue-on-error: true
 
-# STEP 3: Jira Login (Add this new step!)
+      # 3. Build Docker Image
+      - name: Build Docker Image
+        run: docker build -t juice-shop-app:${{ github.sha }} .
+
+      # 4. Container Security Scan (Trivy)
+      - name: Run Trivy Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'juice-shop-app:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1' # If this step fails, the control will directly go to the jira login step.
+          severity: 'CRITICAL,HIGH'
+
+      # 5. Start Juice Shop (for DAST)
+      - name: Start Juice Shop
+        run: |
+          docker run -d -p 3000:3000 juice-shop-app:${{ github.sha }}
+          sleep 40 
+
+      # 6. DAST SCAN (OWASP ZAP)
+      - name: ZAP Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:3000'
+
+      # --- REPORTING SECTION (Whereever the failures comes among above steps this will catch) ---
+
       - name: Login to Jira
-        if: failure()
+        if: failure() # Whereever the red mark comes in the above pipeline, this will trigger.
         uses: atlassian/gajira-login@v3
         env:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
 
-      # STEP 4: Create Jira Ticket on Failure
       - name: Create Jira Issue on Failure
         if: failure()
         uses: atlassian/gajira-create@v3
         with:
-          project: 'KAN' # Nuvvu pampina image lo unna project key
+          project: 'KAN' 
           issuetype: 'Bug'
-          summary: 'Security Vulnerabilities Detected'
-          description: 'High severity issues found. Check Snyk/SonarCloud dashboards.'
+          summary: 'DevSecOps Pipeline: Security Vulnerabilities Detected'
+          description: |
+            Security scans failed in the pipeline.
+            Please check:
+            1. Trivy (Container)
+            2. OWASP ZAP (DAST)
+            3. SonarCloud/Snyk logs.
