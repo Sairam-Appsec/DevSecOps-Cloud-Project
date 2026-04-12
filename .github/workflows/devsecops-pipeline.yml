@@ -13,9 +13,10 @@ jobs:
         with:
           fetch-depth: 0 
 
+      
       - name: Install Dependencies
         run: npm install
-        
+
       # 1. SCA SCAN (Snyk)
       - name: Run Snyk SCA Scan
         uses: snyk/actions/node@master
@@ -82,4 +83,4 @@ jobs:
             Please check:
             1. Trivy (Container)
             2. OWASP ZAP (DAST)
-            3. SonarCloud/Snyk logs. 
+            3. SonarCloud/Snyk logs.  
